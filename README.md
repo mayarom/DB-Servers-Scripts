@@ -1,133 +1,201 @@
 # Security Script Execution Guide
 
-This document contains full instructions and requirements for executing each security script based on the target platform or component.
+> Complete instructions and requirements for executing security scripts across different platforms and components
 
 ---
 
-## Windows Server 2008–2012
+## Table of Contents
 
-- **Script:** `WindowsServer2008-2012.ps1`
-- **Requirements:** PowerShell 5.1, Administrator privileges
-- **Execution:**
-  ```powershell
-  Set-ExecutionPolicy RemoteSigned -Scope Process
-  & "C:\Path\To\WindowsServer2008-2012.ps1"
-  ```
+- [Windows Platforms](#windows-platforms)
+- [Linux Distributions](#linux-distributions) 
+- [Database Systems](#database-systems)
+- [Output Structure](#output-structure)
+- [Best Practices](#best-practices)
 
 ---
 
-## Windows Server 2012 and Above
+## Windows Platforms
 
-- **Script:** `WindowsServer2012+.ps1`
-- **Requirements:** PowerShell 5.1 or newer, Administrator privileges
-- **Execution:**
-  ```powershell
-  Set-ExecutionPolicy RemoteSigned -Scope Process
-  & "C:\Path\To\WindowsServer2012+.ps1"
-  ```
+### Windows Server 2008–2012
 
----
+| **Component** | **Details** |
+|---------------|-------------|
+| **Script** | `WindowsServer2008-2012.ps1` |
+| **Requirements** | PowerShell 5.1, Administrator privileges |
+| **Execution** | See below |
 
-## SQL Server 2016–2019
+```powershell
+Set-ExecutionPolicy RemoteSigned -Scope Process
+& "C:\Path\To\WindowsServer2008-2012.ps1"
+```
 
-- **Script:** `MSSQLServer201619.ps1`
-- **Requirements:** PowerShell + SQLPS module, DBA permissions
-- **Execution:**
-  ```powershell
-  Set-ExecutionPolicy RemoteSigned -Scope Process
-  & "C:\Path\To\MSSQLServer201619.ps1"
-  ```
+### Windows Server 2012 and Above
 
----
+| **Component** | **Details** |
+|---------------|-------------|
+| **Script** | `WindowsServer2012+.ps1` |
+| **Requirements** | PowerShell 5.1 or newer, Administrator privileges |
+| **Execution** | See below |
 
-## Red Hat Enterprise Linux 6–7
-
-- **Script:** `RedHatEnterpriseLinux6-7.sh`
-- **Execution:**
-  ```bash
-  chmod +x RedHatEnterpriseLinux6-7.sh
-  sudo ./RedHatEnterpriseLinux6-7.sh
-  ```
+```powershell
+Set-ExecutionPolicy RemoteSigned -Scope Process
+& "C:\Path\To\WindowsServer2012+.ps1"
+```
 
 ---
 
-## Red Hat Enterprise Linux 8–9
+## Linux Distributions
 
-- **Script:** `RedHatEnterpriseLinux8-9.sh`
-- **Execution:**
-  ```bash
-  chmod +x RedHatEnterpriseLinux8-9.sh
-  sudo ./RedHatEnterpriseLinux8-9.sh
-  ```
+### Red Hat Enterprise Linux 6–7
+
+| **Component** | **Details** |
+|---------------|-------------|
+| **Script** | `RedHatEnterpriseLinux6-7.sh` |
+| **Requirements** | Root/sudo access |
+| **Execution** | See below |
+
+```bash
+chmod +x RedHatEnterpriseLinux6-7.sh
+sudo ./RedHatEnterpriseLinux6-7.sh
+```
+
+### Red Hat Enterprise Linux 8–9
+
+| **Component** | **Details** |
+|---------------|-------------|
+| **Script** | `RedHatEnterpriseLinux8-9.sh` |
+| **Requirements** | Root/sudo access |
+| **Execution** | See below |
+
+```bash
+chmod +x RedHatEnterpriseLinux8-9.sh
+sudo ./RedHatEnterpriseLinux8-9.sh
+```
+
+### Ubuntu 16.04–18.04
+
+| **Component** | **Details** |
+|---------------|-------------|
+| **Script** | `Ubuntu16-18.04.sh` |
+| **Requirements** | Root/sudo access |
+| **Execution** | See below |
+
+```bash
+chmod +x Ubuntu16-18.04.sh
+sudo ./Ubuntu16-18.04.sh
+```
+
+### Ubuntu 20.04–24.04
+
+| **Component** | **Details** |
+|---------------|-------------|
+| **Script** | `Ubuntu20.24.04.sh` |
+| **Requirements** | Root/sudo access |
+| **Execution** | See below |
+
+```bash
+chmod +x Ubuntu20.24.04.sh
+sudo ./Ubuntu20.24.04.sh
+```
 
 ---
 
-## Ubuntu 16.04–18.04
+## Database Systems
 
-- **Script:** `Ubuntu16-18.04.sh`
-- **Execution:**
-  ```bash
-  chmod +x Ubuntu16-18.04.sh
-  sudo ./Ubuntu16-18.04.sh
-  ```
+### PostgreSQL 11 / 13 / 15
 
----
+| **Component** | **Details** |
+|---------------|-------------|
+| **Script** | `PostgreSQL111315.sh` |
+| **Requirements** | `psql` command available, access configured (e.g., `.pgpass`) |
+| **Execution** | See below |
 
-## Ubuntu 20.04–24.04
+```bash
+chmod +x PostgreSQL111315.sh
+./PostgreSQL111315.sh
+```
 
-- **Script:** `Ubuntu20.24.04.sh`
-- **Execution:**
-  ```bash
-  chmod +x Ubuntu20.24.04.sh
-  sudo ./Ubuntu20.24.04.sh
-  ```
+### SQL Server 2016–2019
 
----
+| **Component** | **Details** |
+|---------------|-------------|
+| **Script** | `MSSQLServer201619.ps1` |
+| **Requirements** | PowerShell + SQLPS module, DBA permissions |
+| **Execution** | See below |
 
-## PostgreSQL 11 / 13 / 15
+```powershell
+Set-ExecutionPolicy RemoteSigned -Scope Process
+& "C:\Path\To\MSSQLServer201619.ps1"
+```
 
-- **Script:** `PostgreSQL111315.sh`
-- **Requirements:** `psql` command available; access configured (e.g., .pgpass)
-- **Execution:**
-  ```bash
-  chmod +x PostgreSQL111315.sh
-  ./PostgreSQL111315.sh
-  ```
+### MongoDB 4.x / 6.x
 
----
+| **Component** | **Details** |
+|---------------|-------------|
+| **Script** | `MongoDB4x6x.sh` |
+| **Requirements** | `mongo` CLI installed and in `$PATH` |
+| **Execution** | See below |
 
-## MongoDB 4.x / 6.x
-
-- **Script:** `MongoDB4x6x.sh`
-- **Requirements:** `mongo` CLI must be installed and in `$PATH`
-- **Execution:**
-  ```bash
-  chmod +x MongoDB4x6x.sh
-  ./MongoDB4x6x.sh
-  ```
+```bash
+chmod +x MongoDB4x6x.sh
+./MongoDB4x6x.sh
+```
 
 ---
 
-## Output Folder Convention
+## Output Structure
 
-Each script generates an output folder under `/tmp` (Linux) or the working directory (Windows) in the format:
+### Folder Naming Convention
+
+Each script generates an output folder with the following naming pattern:
+
 ```
 <hostname>_<version>_<date>
 ```
-Example:
+
+**Example:**
 ```
 srv-app01_Ubuntu20_24_2025-07-31_14-12-00
 ```
 
-Each folder includes relevant CSV and TXT files containing the audit results.
+### Output Locations
+
+| **Platform** | **Default Location** |
+|--------------|---------------------|
+| **Linux** | `/tmp/` |
+| **Windows** | Current working directory |
+
+### Output Files
+
+Each output folder contains:
+- **CSV files** - Structured audit data
+- **TXT files** - Detailed audit results and logs
 
 ---
 
-## General Recommendations
+## Best Practices
 
-- Always run scripts with appropriate privileges (sudo/Admin).
-- On Linux, set language environment if needed:
-  ```bash
-  export LANG=en_US.UTF-8
-  ```
-- On Windows, launch PowerShell as Administrator.
+### Privilege Requirements
+
+> **Important:** Always run scripts with appropriate elevated privileges
+
+- **Linux:** Use `sudo` for system-level audits
+- **Windows:** Launch PowerShell as Administrator
+
+### Environment Setup
+
+#### Linux Systems
+```bash
+# Set language environment if needed
+export LANG=en_US.UTF-8
+```
+
+#### Windows Systems
+```powershell
+# Launch PowerShell as Administrator from Start Menu
+# Right-click PowerShell → "Run as Administrator"
+```
+
+---
+
+*Last updated: July 31, 2025*
