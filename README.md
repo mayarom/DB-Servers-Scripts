@@ -126,10 +126,7 @@ chmod +x PostgreSQL111315.sh
 ```powershell
 Set-ExecutionPolicy Bypass -Scope Process -Force
 & "C:\Path\To\MSSQLServer201619.ps1" -ServerInstance "Server_Name_or_FQDN" -Database "master"
-```
-<span style="color:red">Note: The original script failed with
-The target principal name is incorrect due to a TLS certificate name mismatch.
-The fix added -Encrypt Optional -TrustServerCertificate $true to all Invoke-Sqlcmd calls, allowing the script to run even when the certificate name does not match the server name.</span>
+<div style="border: 2px solid red; padding: 10px; background-color: #ffe6e6;"> <strong style="color:red;">Note:</strong> The original script failed with <code>The target principal name is incorrect</code> due to a TLS certificate name mismatch. The fix added <code>-Encrypt Optional -TrustServerCertificate $true</code> to all <code>Invoke-Sqlcmd</code> calls, allowing the script to run even when the certificate name does not match the server name. </div> ```
 
 
 ### MongoDB 4.x / 6.x
