@@ -25,7 +25,7 @@ New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 
 # Test connection and get version
 try {
-    $version = (Invoke-Sqlcmd -Query "SELECT @@VERSION as Version" `
+    $version = (Invoke-Sqlcmd -Query "SELECT @@VERSION as Version" ` -Encrypt Optional -TrustServerCertificate $true
         -ServerInstance $ServerInstance `
         -Database $Database `
         -Encrypt Optional `
@@ -52,7 +52,7 @@ SELECT
     @@VERSION AS FullVersion
 "@
 
-$versionInfo = Invoke-Sqlcmd -Query $versionQuery -ServerInstance $ServerInstance -Database $Database
+$versionInfo = Invoke-Sqlcmd -Query $versionQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
 $versionInfo | Export-Csv -Path "$outDir\sql_version_info.csv" -NoTypeInformation -Encoding UTF8
 
 # 2. Authentication Mode
@@ -66,7 +66,7 @@ SELECT
     SERVERPROPERTY('IsIntegratedSecurityOnly') AS IsWindowsAuthOnly
 "@
 
-$authMode = Invoke-Sqlcmd -Query $authQuery -ServerInstance $ServerInstance -Database $Database
+$authMode = Invoke-Sqlcmd -Query $authQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
 $authMode | Export-Csv -Path "$outDir\sql_authentication_mode.csv" -NoTypeInformation -Encoding UTF8
 
 # 3. SYSADMIN and SA Users
@@ -86,7 +86,7 @@ WHERE p.type IN ('S', 'U', 'G')
 ORDER BY p.name
 "@
 
-$sysadminUsers = Invoke-Sqlcmd -Query $sysadminQuery -ServerInstance $ServerInstance -Database $Database
+$sysadminUsers = Invoke-Sqlcmd -Query $sysadminQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
 $sysadminUsers | Export-Csv -Path "$outDir\sql_sysadmin_users.csv" -NoTypeInformation -Encoding UTF8
 
 # 4. All Server Principals and Permissions
@@ -114,7 +114,7 @@ WHERE p.type IN ('S', 'U', 'G', 'R')
 ORDER BY p.name
 "@
 
-$allUsers = Invoke-Sqlcmd -Query $usersQuery -ServerInstance $ServerInstance -Database $Database
+$allUsers = Invoke-Sqlcmd -Query $usersQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
 $allUsers | Export-Csv -Path "$outDir\sql_users.csv" -NoTypeInformation -Encoding UTF8
 
 # 5. TDE Status
@@ -144,7 +144,7 @@ ORDER BY d.name
 "@
 
 try {
-    $tdeStatus = Invoke-Sqlcmd -Query $tdeQuery -ServerInstance $ServerInstance -Database $Database
+    $tdeStatus = Invoke-Sqlcmd -Query $tdeQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
     $tdeStatus | Export-Csv -Path "$outDir\sql_tde_status.csv" -NoTypeInformation -Encoding UTF8
 } catch {
     Write-Host "TDE check failed: $($_.Exception.Message)"
@@ -174,7 +174,7 @@ WHERE c.encryption_type IS NOT NULL AND c.encryption_type <> 0
 "@
 
 try {
-    $alwaysEncrypted = Invoke-Sqlcmd -Query $alwaysEncryptedQuery -ServerInstance $ServerInstance -Database $Database
+    $alwaysEncrypted = Invoke-Sqlcmd -Query $alwaysEncryptedQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
     $alwaysEncrypted | Export-Csv -Path "$outDir\sql_always_encrypted.csv" -NoTypeInformation -Encoding UTF8
 } catch {
     Write-Host "Always Encrypted check failed: $($_.Exception.Message)"
@@ -212,7 +212,7 @@ WHERE name = 'default trace enabled'
 "@
 
 try {
-    $auditConfig = Invoke-Sqlcmd -Query $auditQuery -ServerInstance $ServerInstance -Database $Database
+    $auditConfig = Invoke-Sqlcmd -Query $auditQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
     $auditConfig | Export-Csv -Path "$outDir\sql_audit_config.csv" -NoTypeInformation -Encoding UTF8
 } catch {
     Write-Host "Audit configuration check failed: $($_.Exception.Message)"
@@ -240,7 +240,7 @@ WHERE is_default = 1
 "@
 
 try {
-    $traceStatus = Invoke-Sqlcmd -Query $traceQuery -ServerInstance $ServerInstance -Database $Database
+    $traceStatus = Invoke-Sqlcmd -Query $traceQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
     $traceStatus | Export-Csv -Path "$outDir\sql_trace_status.csv" -NoTypeInformation -Encoding UTF8
 } catch {
     Write-Host "Trace status check failed: $($_.Exception.Message)"
@@ -275,7 +275,7 @@ ORDER BY DatabaseName, PrincipalName, PermissionType
 "@
 
 try {
-    $dbRoles = Invoke-Sqlcmd -Query $dbRolesQuery -ServerInstance $ServerInstance -Database $Database
+    $dbRoles = Invoke-Sqlcmd -Query $dbRolesQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
     $dbRoles | Export-Csv -Path "$outDir\sql_database_permissions.csv" -NoTypeInformation -Encoding UTF8
 } catch {
     Write-Host "Database permissions check failed: $($_.Exception.Message)"
@@ -316,7 +316,7 @@ ORDER BY SecurityStatus DESC, c.name
 "@
 
 try {
-    $securityConfig = Invoke-Sqlcmd -Query $securitySummary -ServerInstance $ServerInstance -Database $Database
+    $securityConfig = Invoke-Sqlcmd -Query $securitySummary -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
     $securityConfig | Export-Csv -Path "$outDir\sql_security_config.csv" -NoTypeInformation -Encoding UTF8
 } catch {
     Write-Host "Security configuration check failed: $($_.Exception.Message)"
