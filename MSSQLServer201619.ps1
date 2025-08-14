@@ -1,6 +1,7 @@
 # MSSQL Server Audit Script - PowerShell + T-SQL
 # Target: SQL Server 2016/2019
 # Functions: SYSADMIN/SA check, Mixed Mode, TDE, Always Encrypted, Audit Logs, User permissions
+# Fixed for all SqlServer module versions
 
 param(
     [string]$ServerInstance = ".",
@@ -23,23 +24,80 @@ $outDir = "C:\Audit\$hostname`_MSSQL_$date"
 # Create output directory
 New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 
+# Function to execute SQL commands with proper connection handling
+function Invoke-SqlCmdSafe {
+    param(
+        [string]$Query,
+        [string]$ServerInstance = $ServerInstance,
+        [string]$Database = $Database
+    )
+    
+    # Try different connection methods based on SqlServer module version
+    $connectionMethods = @(
+        # Method 1: Connection String with TrustServerCertificate (SQL Server 2019+)
+        @{
+            Method = "ConnectionString_TrustCert"
+            ConnectionString = "Server=$ServerInstance;Database=$Database;Integrated Security=True;TrustServerCertificate=True;Encrypt=True;"
+        },
+        # Method 2: Connection String without encryption (fallback)
+        @{
+            Method = "ConnectionString_NoEncrypt" 
+            ConnectionString = "Server=$ServerInstance;Database=$Database;Integrated Security=True;Encrypt=False;"
+        },
+        # Method 3: Traditional parameters (older versions)
+        @{
+            Method = "Parameters"
+            ConnectionString = $null
+        }
+    )
+    
+    foreach ($method in $connectionMethods) {
+        try {
+            Write-Host "Trying connection method: $($method.Method)" -ForegroundColor Yellow
+            
+            if ($method.ConnectionString) {
+                # Use connection string
+                $result = Invoke-Sqlcmd -Query $Query -ConnectionString $method.ConnectionString -ErrorAction Stop
+            } else {
+                # Use traditional parameters
+                $result = Invoke-Sqlcmd -Query $Query -ServerInstance $ServerInstance -Database $Database -ErrorAction Stop
+            }
+            
+            Write-Host "✓ Connection successful with method: $($method.Method)" -ForegroundColor Green
+            return $result
+        }
+        catch {
+            Write-Host "✗ Method $($method.Method) failed: $($_.Exception.Message)" -ForegroundColor Red
+            continue
+        }
+    }
+    
+    # If all methods failed
+    throw "All connection methods failed. Please check server connectivity and permissions."
+}
+
 # Test connection and get version
+Write-Host "Testing SQL Server connection to: $ServerInstance" -ForegroundColor Cyan
+
 try {
-    $version = (Invoke-Sqlcmd -Query "SELECT @@VERSION as Version" `
-        -ServerInstance $ServerInstance `
-        -Database $Database `
-        -Encrypt Optional `
-        -TrustServerCertificate $true).Version
-    Write-Host "Connected to SQL Server: $hostname"
+    $versionResult = Invoke-SqlCmdSafe -Query "SELECT @@VERSION as Version, @@SERVERNAME as ServerName"
+    Write-Host "Connected to SQL Server: $($versionResult.ServerName)" -ForegroundColor Green
+    $version = $versionResult.Version
 } catch {
-    Write-Host "Failed to connect to SQL Server: $($_.Exception.Message)"
+    Write-Host "Failed to connect to SQL Server: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Please verify:" -ForegroundColor Yellow
+    Write-Host "- Server name is correct: $ServerInstance" -ForegroundColor Yellow
+    Write-Host "- SQL Server service is running" -ForegroundColor Yellow
+    Write-Host "- You have appropriate permissions" -ForegroundColor Yellow
+    Write-Host "- Windows Firewall allows connections" -ForegroundColor Yellow
     exit 1
 }
 
-Write-Host "Starting MSSQL audit - $date"
-Write-Host "Output directory: $outDir"
+Write-Host "Starting MSSQL audit - $date" -ForegroundColor Cyan
+Write-Host "Output directory: $outDir" -ForegroundColor Cyan
 
 # 1. SQL Server Version and Edition
+Write-Host "Collecting SQL Server Version Info..." -ForegroundColor Green
 $versionQuery = @"
 SELECT
     SERVERPROPERTY('ServerName') AS ServerName,
@@ -52,10 +110,16 @@ SELECT
     @@VERSION AS FullVersion
 "@
 
-$versionInfo = Invoke-Sqlcmd -Query $versionQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
-$versionInfo | Export-Csv -Path "$outDir\sql_version_info.csv" -NoTypeInformation -Encoding UTF8
+try {
+    $versionInfo = Invoke-SqlCmdSafe -Query $versionQuery
+    $versionInfo | Export-Csv -Path "$outDir\sql_version_info.csv" -NoTypeInformation -Encoding UTF8
+    Write-Host "✓ Version info collected" -ForegroundColor Green
+} catch {
+    Write-Host "✗ Version info failed: $($_.Exception.Message)" -ForegroundColor Red
+}
 
 # 2. Authentication Mode
+Write-Host "Collecting Authentication Mode..." -ForegroundColor Green
 $authQuery = @"
 SELECT
     CASE SERVERPROPERTY('IsIntegratedSecurityOnly')
@@ -66,10 +130,16 @@ SELECT
     SERVERPROPERTY('IsIntegratedSecurityOnly') AS IsWindowsAuthOnly
 "@
 
-$authMode = Invoke-Sqlcmd -Query $authQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
-$authMode | Export-Csv -Path "$outDir\sql_authentication_mode.csv" -NoTypeInformation -Encoding UTF8
+try {
+    $authMode = Invoke-SqlCmdSafe -Query $authQuery
+    $authMode | Export-Csv -Path "$outDir\sql_authentication_mode.csv" -NoTypeInformation -Encoding UTF8
+    Write-Host "✓ Authentication mode collected" -ForegroundColor Green
+} catch {
+    Write-Host "✗ Authentication mode failed: $($_.Exception.Message)" -ForegroundColor Red
+}
 
 # 3. SYSADMIN and SA Users
+Write-Host "Collecting SYSADMIN users..." -ForegroundColor Green
 $sysadminQuery = @"
 SELECT
     p.name AS PrincipalName,
@@ -86,10 +156,16 @@ WHERE p.type IN ('S', 'U', 'G')
 ORDER BY p.name
 "@
 
-$sysadminUsers = Invoke-Sqlcmd -Query $sysadminQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
-$sysadminUsers | Export-Csv -Path "$outDir\sql_sysadmin_users.csv" -NoTypeInformation -Encoding UTF8
+try {
+    $sysadminUsers = Invoke-SqlCmdSafe -Query $sysadminQuery
+    $sysadminUsers | Export-Csv -Path "$outDir\sql_sysadmin_users.csv" -NoTypeInformation -Encoding UTF8
+    Write-Host "✓ SYSADMIN users collected ($($sysadminUsers.Count) found)" -ForegroundColor Green
+} catch {
+    Write-Host "✗ SYSADMIN users failed: $($_.Exception.Message)" -ForegroundColor Red
+}
 
 # 4. All Server Principals and Permissions
+Write-Host "Collecting all server principals..." -ForegroundColor Green
 $usersQuery = @"
 SELECT
     p.name AS UserName,
@@ -114,10 +190,16 @@ WHERE p.type IN ('S', 'U', 'G', 'R')
 ORDER BY p.name
 "@
 
-$allUsers = Invoke-Sqlcmd -Query $usersQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
-$allUsers | Export-Csv -Path "$outDir\sql_users.csv" -NoTypeInformation -Encoding UTF8
+try {
+    $allUsers = Invoke-SqlCmdSafe -Query $usersQuery
+    $allUsers | Export-Csv -Path "$outDir\sql_users.csv" -NoTypeInformation -Encoding UTF8
+    Write-Host "✓ Server principals collected ($($allUsers.Count) found)" -ForegroundColor Green
+} catch {
+    Write-Host "✗ Server principals failed: $($_.Exception.Message)" -ForegroundColor Red
+}
 
 # 5. TDE Status
+Write-Host "Collecting TDE status..." -ForegroundColor Green
 $tdeQuery = @"
 SELECT
     d.name AS DatabaseName,
@@ -144,13 +226,15 @@ ORDER BY d.name
 "@
 
 try {
-    $tdeStatus = Invoke-Sqlcmd -Query $tdeQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
+    $tdeStatus = Invoke-SqlCmdSafe -Query $tdeQuery
     $tdeStatus | Export-Csv -Path "$outDir\sql_tde_status.csv" -NoTypeInformation -Encoding UTF8
+    Write-Host "✓ TDE status collected" -ForegroundColor Green
 } catch {
-    Write-Host "TDE check failed: $($_.Exception.Message)"
+    Write-Host "✗ TDE status failed: $($_.Exception.Message)" -ForegroundColor Red
 }
 
 # 6. Always Encrypted Status
+Write-Host "Collecting Always Encrypted status..." -ForegroundColor Green
 $alwaysEncryptedQuery = @"
 SELECT
     DB_NAME() AS DatabaseName,
@@ -174,13 +258,15 @@ WHERE c.encryption_type IS NOT NULL AND c.encryption_type <> 0
 "@
 
 try {
-    $alwaysEncrypted = Invoke-Sqlcmd -Query $alwaysEncryptedQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
+    $alwaysEncrypted = Invoke-SqlCmdSafe -Query $alwaysEncryptedQuery
     $alwaysEncrypted | Export-Csv -Path "$outDir\sql_always_encrypted.csv" -NoTypeInformation -Encoding UTF8
+    Write-Host "✓ Always Encrypted status collected" -ForegroundColor Green
 } catch {
-    Write-Host "Always Encrypted check failed: $($_.Exception.Message)"
+    Write-Host "✗ Always Encrypted failed: $($_.Exception.Message)" -ForegroundColor Red
 }
 
 # 7. Server Audit Configuration
+Write-Host "Collecting audit configuration..." -ForegroundColor Green
 $auditQuery = @"
 SELECT
     a.name AS AuditName,
@@ -212,13 +298,15 @@ WHERE name = 'default trace enabled'
 "@
 
 try {
-    $auditConfig = Invoke-Sqlcmd -Query $auditQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
+    $auditConfig = Invoke-SqlCmdSafe -Query $auditQuery
     $auditConfig | Export-Csv -Path "$outDir\sql_audit_config.csv" -NoTypeInformation -Encoding UTF8
+    Write-Host "✓ Audit configuration collected" -ForegroundColor Green
 } catch {
-    Write-Host "Audit configuration check failed: $($_.Exception.Message)"
+    Write-Host "✗ Audit configuration failed: $($_.Exception.Message)" -ForegroundColor Red
 }
 
 # 8. Default Trace Status
+Write-Host "Collecting trace status..." -ForegroundColor Green
 $traceQuery = @"
 SELECT
     c.name AS ConfigurationName,
@@ -240,13 +328,15 @@ WHERE is_default = 1
 "@
 
 try {
-    $traceStatus = Invoke-Sqlcmd -Query $traceQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
+    $traceStatus = Invoke-SqlCmdSafe -Query $traceQuery
     $traceStatus | Export-Csv -Path "$outDir\sql_trace_status.csv" -NoTypeInformation -Encoding UTF8
+    Write-Host "✓ Trace status collected" -ForegroundColor Green
 } catch {
-    Write-Host "Trace status check failed: $($_.Exception.Message)"
+    Write-Host "✗ Trace status failed: $($_.Exception.Message)" -ForegroundColor Red
 }
 
 # 9. Database Roles and Permissions
+Write-Host "Collecting database permissions..." -ForegroundColor Green
 $dbRolesQuery = @"
 USE master;
 SELECT
@@ -275,13 +365,15 @@ ORDER BY DatabaseName, PrincipalName, PermissionType
 "@
 
 try {
-    $dbRoles = Invoke-Sqlcmd -Query $dbRolesQuery -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
+    $dbRoles = Invoke-SqlCmdSafe -Query $dbRolesQuery
     $dbRoles | Export-Csv -Path "$outDir\sql_database_permissions.csv" -NoTypeInformation -Encoding UTF8
+    Write-Host "✓ Database permissions collected" -ForegroundColor Green
 } catch {
-    Write-Host "Database permissions check failed: $($_.Exception.Message)"
+    Write-Host "✗ Database permissions failed: $($_.Exception.Message)" -ForegroundColor Red
 }
 
 # 10. Security Configuration Summary
+Write-Host "Collecting security configuration..." -ForegroundColor Green
 $securitySummary = @"
 SELECT
     c.name AS ConfigurationName,
@@ -316,10 +408,11 @@ ORDER BY SecurityStatus DESC, c.name
 "@
 
 try {
-    $securityConfig = Invoke-Sqlcmd -Query $securitySummary -ServerInstance $ServerInstance -Database $Database -Encrypt Optional -TrustServerCertificate $true
+    $securityConfig = Invoke-SqlCmdSafe -Query $securitySummary
     $securityConfig | Export-Csv -Path "$outDir\sql_security_config.csv" -NoTypeInformation -Encoding UTF8
+    Write-Host "✓ Security configuration collected" -ForegroundColor Green
 } catch {
-    Write-Host "Security configuration check failed: $($_.Exception.Message)"
+    Write-Host "✗ Security configuration failed: $($_.Exception.Message)" -ForegroundColor Red
 }
 
 # Generate Summary Report
@@ -327,6 +420,7 @@ $summaryReport = @"
 MSSQL Server Security Audit Summary
 ===================================
 Server: $hostname
+Target Instance: $ServerInstance  
 Date: $date
 SQL Version: $($versionInfo.ProductVersion)
 Authentication Mode: $($authMode.AuthenticationMode)
@@ -338,5 +432,16 @@ Files generated in: $outDir
 
 $summaryReport | Out-File -FilePath "$outDir\AUDIT_SUMMARY.txt" -Encoding UTF8
 
-Write-Host "MSSQL audit completed"
-Write-Host "Files saved to: $outDir"
+Write-Host ""
+Write-Host "================================" -ForegroundColor Cyan
+Write-Host "MSSQL audit completed successfully!" -ForegroundColor Green
+Write-Host "Files saved to: $outDir" -ForegroundColor Cyan
+Write-Host "================================" -ForegroundColor Cyan
+
+# Show summary
+Write-Host ""
+Write-Host "Quick Summary:" -ForegroundColor Yellow
+Write-Host "- Target Server: $ServerInstance" -ForegroundColor White
+Write-Host "- SQL Version: $($versionInfo.ProductVersion)" -ForegroundColor White
+Write-Host "- SYSADMIN Users: $($sysadminUsers.Count)" -ForegroundColor White
+Write-Host "- Total Principals: $($allUsers.Count)" -ForegroundColor White
