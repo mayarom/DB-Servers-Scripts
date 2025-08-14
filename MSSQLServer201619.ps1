@@ -25,7 +25,7 @@ New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 
 # Test connection and get version
 try {
-    $version = (Invoke-Sqlcmd -Query "SELECT @@VERSION as Version" ` -Encrypt Optional -TrustServerCertificate $true
+    $version = (Invoke-Sqlcmd -Query "SELECT @@VERSION as Version" `
         -ServerInstance $ServerInstance `
         -Database $Database `
         -Encrypt Optional `
@@ -339,5 +339,4 @@ Files generated in: $outDir
 $summaryReport | Out-File -FilePath "$outDir\AUDIT_SUMMARY.txt" -Encoding UTF8
 
 Write-Host "MSSQL audit completed"
-
 Write-Host "Files saved to: $outDir"
