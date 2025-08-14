@@ -25,7 +25,11 @@ New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 
 # Test connection and get version
 try {
-    $version = (Invoke-Sqlcmd -Query "SELECT @@VERSION as Version" -ServerInstance $ServerInstance -Database $Database).Version
+    $version = (Invoke-Sqlcmd -Query "SELECT @@VERSION as Version" `
+        -ServerInstance $ServerInstance `
+        -Database $Database `
+        -Encrypt Optional `
+        -TrustServerCertificate $true).Version
     Write-Host "Connected to SQL Server: $hostname"
 } catch {
     Write-Host "Failed to connect to SQL Server: $($_.Exception.Message)"
@@ -335,4 +339,5 @@ Files generated in: $outDir
 $summaryReport | Out-File -FilePath "$outDir\AUDIT_SUMMARY.txt" -Encoding UTF8
 
 Write-Host "MSSQL audit completed"
+
 Write-Host "Files saved to: $outDir"
