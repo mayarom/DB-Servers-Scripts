@@ -120,12 +120,12 @@ chmod +x PostgreSQL111315.sh
 | **Component** | **Details** |
 |---------------|-------------|
 | **Script** | `MSSQLServer201619.ps1` |
-| **Requirements** | PowerShell + SQLPS module, DBA permissions |
+| **Requirements** | PowerShell + SqlServer module, DBA permissions |
 | **Execution** | See below |
 
 ```powershell
-Set-ExecutionPolicy RemoteSigned -Scope Process
-& "C:\Path\To\MSSQLServer201619.ps1"
+Set-ExecutionPolicy Bypass -Scope Process -Force
+& "C:\Path\To\MSSQLServer201619.ps1" -ServerInstance "Server_Name_or_FQDN" -Database "master"
 ```
 
 ### MongoDB 4.x / 6.x
